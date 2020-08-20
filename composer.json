@@ -1,4 +1,5 @@
 {
+    "name": "kerneldos/telegram-bot",
     "require": {
         "telegram-bot/api": "^2.3",
         "ext-simplexml": "*",
