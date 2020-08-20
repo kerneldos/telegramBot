@@ -1,11 +1,9 @@
 <?php
 require_once "vendor/autoload.php";
 
-use TelegramBot\Api\BotApi;
 use TelegramBot\Api\Client;
 use TelegramBot\Api\InvalidJsonException;
 use TelegramBot\Api\Types\ReplyKeyboardMarkup;
-use TelegramBot\Api\Types\Update;
 
 class MyClient extends Client {
 
