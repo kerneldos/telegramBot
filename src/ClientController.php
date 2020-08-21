@@ -3,13 +3,22 @@
 
 namespace app;
 
+use TelegramBot\Api\Client;
+use TelegramBot\Api\Types\CallbackQuery;
+use TelegramBot\Api\Types\Inline\InlineKeyboardMarkup;
+use TelegramBot\Api\Types\InputMedia\ArrayOfInputMedia;
+use TelegramBot\Api\Types\InputMedia\InputMediaPhoto;
+use TelegramBot\Api\Types\InputMedia\InputMediaVideo;
+use TelegramBot\Api\Types\Message;
+use TelegramBot\Api\Types\ReplyKeyboardMarkup;
+use TelegramBot\Api\Types\Update;
 
-class ClientController extends \TelegramBot\Api\Client {
+class ClientController extends Client {
 
     public function run() {
         //команда для start
         $this->command('start', function ($message) {
-            $keyboard = new \TelegramBot\Api\Types\ReplyKeyboardMarkup([
+            $keyboard = new ReplyKeyboardMarkup([
                 ['/help', '/showInlineKeyboard']
             ], null, true);
 
@@ -17,8 +26,7 @@ class ClientController extends \TelegramBot\Api\Client {
             $this->api->sendMessage($message->getChat()->getId(), $answer, null, false, null, $keyboard);
         });
 
-        //команда для помощи
-        $this->command('help', function ($message) {
+        $helpAction = function ($message) {
             $answer = '
                 Команды:
                     /help - вывод справки
@@ -26,16 +34,20 @@ class ClientController extends \TelegramBot\Api\Client {
             ';
 
             /**
-             * @var \TelegramBot\Api\Types\Message $message
+             * @var Message $message
              */
             $this->api->sendMessage($message->getChat()->getId(), $answer);
-        });
+        };
+
+        //команда для помощи
+        $this->command('help', $helpAction);
 
         $this->command('showInlineKeyboard', function ($message) {
-            $keyboard = new \TelegramBot\Api\Types\Inline\InlineKeyboardMarkup([
+            $keyboard = new InlineKeyboardMarkup([
                 [
                     ['text' => 'Показать новости', 'callback_data' => '/posts'],
                     ['text' => 'Показать картинку', 'callback_data' => '/picture'],
+                    ['text' => 'Показать видео', 'callback_data' => '/video'],
                 ]
             ]);
 
@@ -44,12 +56,12 @@ class ClientController extends \TelegramBot\Api\Client {
 
         $this->callbackQuery(function ($update) {
             /**
-             * @var \TelegramBot\Api\Types\CallbackQuery $update
+             * @var CallbackQuery $update
              */
 
             $message = $update->getMessage();
-
             $action = $update->getData();
+
             switch ($action) {
                 case '/posts':
                     $html = simplexml_load_file('https://netology.ru/blog/feed');
@@ -63,8 +75,14 @@ class ClientController extends \TelegramBot\Api\Client {
 
                     break;
                 case '/picture':
-                    $media = new \TelegramBot\Api\Types\InputMedia\ArrayOfInputMedia();
-                    $media->addItem(new \TelegramBot\Api\Types\InputMedia\InputMediaPhoto('http://lorempixel.com/640/480/nature'));
+                    $media = new ArrayOfInputMedia();
+                    $media->addItem(new InputMediaPhoto('http://lorempixel.com/640/480/nature'));
+
+                    $this->api->sendMediaGroup($message->getChat()->getId(), $media);
+                    break;
+                case '/video':
+                    $media = new ArrayOfInputMedia();
+                    $media->addItem(new InputMediaVideo('http://clips.vorwaerts-gmbh.de/VfE_html5.mp4'));
 
                     $this->api->sendMediaGroup($message->getChat()->getId(), $media);
                     break;
@@ -73,31 +91,13 @@ class ClientController extends \TelegramBot\Api\Client {
             }
         });
 
-        //        $updates = $this->api->getUpdates();
+        $update = Update::fromResponse(json_decode($this->getRawBody(), true));
 
-        //        $update = BotApi::jsonValidate($this->getRawBody(), true);
-        //        $update = json_decode($this->getRawBody(), true);
-        //
-        //        if (!empty($update['callback_query'])) {
-        //
-        //            $this->callbackQuery(function ($query) {
-        //                /**
-        //                 * @var TelegramBot\Api\Types\CallbackQuery $query
-        //                 */
-        //                $this->api->sendMessage($query->getMessage()->getChat()->getId(), 'answer');
-        //            });
-        //
-        //            $chatId = $update['callback_query']["message"]["chat"]["id"];
-        //            $message = $update["message"]["text"];
-        ////            echo print_r($updates, true);
-        //            try {
-        //                $this->api->sendMessage($chatId, 'answer');
-        //            } catch (\TelegramBot\Api\InvalidArgumentException $e) {
-        //                $e->getMessage();
-        //            } catch (\TelegramBot\Api\Exception $e) {
-        //                $e->getMessage();
-        //            }
-        //        }
+        if (!empty($update->getMessage()) && empty($update->getMessage()->getEntities())) {
+            $update->getMessage()->setText('/help');
+
+            $this->events->handle($update);
+        }
 
         parent::run();
     }
