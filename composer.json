@@ -3,6 +3,10 @@
     "require": {
         "telegram-bot/api": "^2.3",
         "ext-simplexml": "*",
-        "ext-curl": "*"
+        "ext-curl": "*",
+        "ext-json": "*"
+    },
+    "autoload": {
+        "psr-4": {"app\\": "src"}
     }
 }
